@@ -33,6 +33,10 @@ StopWDT     mov.w   #WDTPW|WDTHOLD,&WDTCTL  ; Stop watchdog timer
             bis.b   #BIT1, &P1REN
             bis.b   #BIT1, &P1OUT
 
+            nop
+            bis     #GIE,       SR; Habilita todos os interrupts
+            nop
+
 loop        bit.b   #BIT1, &P1IN            ;lê estado do S1
             jnz     off                     ;pula por padrão para o estado off
 
@@ -55,7 +59,12 @@ dec_off     dec     R5
             jmp     loop
             jmp     off
 
-
+WDT_ISR:
+            bic     #WDTIE,         SFRIE1
+            bic     #WDTIFG,        SFRIFG1
+            mov.w   #WDTPW|WDTHOLD,&WDTCTL
+            bis.b   #0x02,      P1IE
+            reti
 ;-------------------------------------------------------------------------------
 ; Stack Pointer definition
 ;-------------------------------------------------------------------------------
@@ -67,4 +76,5 @@ dec_off     dec     R5
 ;-------------------------------------------------------------------------------
             .sect   ".reset"                ; MSP430 RESET Vector
             .short  RESET
-            
+            .sect   WDT_VECTOR
+            .short  WDT_ISR
