@@ -32,17 +32,17 @@ limparPM5	xor.b	#LOCKLPM5, PM5CTL0
 			bis.b	#BIT7,		P8DIR
 			bis.b	#BIT7,		P8OUT
 
-			;S2 (P1.2 - INTERRUPÇÃO)
+			;S2 (P2.0 - INTERRUPÇÃO)
 			bic.b	#BIT0,		P2DIR
 			bis.b	#BIT0,		P2IE
 			bis.b	#BIT0,		P2IES
 			bis.b	#BIT0,		P2REN
 			bic.b	#BIT0,		P2IFG
-			bis.b	#BIT0,		P2OUT
 			nop
 			bis		#GIE,		SR; Habilita todos os interrupts
 			nop
 
+			;S1	(P4.0 - VARREDURA)
 			bic.b	#BIT0,		&P4DIR
 			bis.b	#BIT0,		&P4REN
 			bis.b	#BIT0,		&P4OUT
@@ -51,48 +51,36 @@ loop		bit.b	#BIT0, &P4IN
 			jnz		sequence
 
 sequence	call	#clear
-			call 	#pin_sweep_sequence
-			call	#delay
-			call 	#pin_sweep_sequence
+			call	#delay_sequence
 			xor.b	#BIT4, P8OUT
-			call	#delay
-			call 	#pin_sweep_sequence
+			call	#delay_sequence
 			bic.b	#BIT4, P8OUT
 			xor.b	#BIT5, P8OUT
-			call	#delay
-			call 	#pin_sweep_sequence
+			call	#delay_sequence
 			bic.b	#BIT5, P8OUT
 			xor.b	#BIT6, P8OUT
-			call	#delay
-			call 	#pin_sweep_sequence
+			call	#delay_sequence
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT7, P8OUT
-			call	#delay
-			call 	#pin_sweep_sequence
-            jmp		loop
+			call	#delay_sequence
+            jmp		sequence
 
 invert		call 	#clear
-			call    #pin_sweep_invert
-			call	#delay
+			call	#delay_invert
 			xor.b	#BIT7, P8OUT
-			call	#delay
-			call    #pin_sweep_invert
+			call	#delay_invert
 			bic.b	#BIT7, P8OUT
 			xor.b	#BIT6, P8OUT
-			call	#delay
-			call    #pin_sweep_invert
+			call	#delay_invert
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT5, P8OUT
-			call	#delay
-			call    #pin_sweep_invert
+			call	#delay_invert
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT5, P8OUT
-			call	#delay
-			call    #pin_sweep_invert
+			call	#delay_invert
 			bic.b	#BIT5, P8OUT
 			xor.b	#BIT4, P8OUT
-			call	#delay
-			call    #pin_sweep_invert
+			call	#delay_invert
 			jmp 	invert
 
 delay		mov.b	#0x20000, R4
@@ -108,6 +96,16 @@ pin_sweep_sequence bit.b   #BIT0, &P4IN
             	   jz      invert
             	   ret
 
+delay_sequence call 	#pin_sweep_sequence
+			   call		#delay
+			   call 	#pin_sweep_sequence
+			   ret
+
+delay_invert   call		#pin_sweep_invert
+			   call		#delay
+			   call		#pin_sweep_invert
+			   ret
+
 clear		bic.b	#BIT4, P8OUT
 			bic.b	#BIT5, P8OUT
 			bic.b	#BIT6, P8OUT
@@ -116,10 +114,7 @@ clear		bic.b	#BIT4, P8OUT
 
 P1_ISR:
 			bic.b	#BIT0, P2IFG;Libera a flag de interrupção
-			bic.b	#BIT0, P2IE;Desativa a interrupção na p1.1
-			mov		#WDT_MDLY_32,	WDTCTL;Inicia WDT
-			bic		#WDTIFG,		SFRIFG1
-			or		#WDTIE,		SFRIE1
+			bic.b	#BIT0, P2IE;Desativa a interrupção na p2.0
 blink		bic.b	#BIT4, P8OUT
 			bic.b	#BIT5, P8OUT
 			bic.b	#BIT6, P8OUT
@@ -136,13 +131,6 @@ blink		bic.b	#BIT4, P8OUT
 			bic.b	#BIT0, P2IFG;Libera a flag de interrupção
           	reti
 
-WDT_ISR:
-			bic		#WDTIE,			SFRIE1
-			bic		#WDTIFG,		SFRIFG1
-			mov.w   #WDTPW|WDTHOLD,&WDTCTL
-			bis.b	#BIT0,		P2IE
-			reti
-
 ;-------------------------------------------------------------------------------
 ; Stack Pointer definition
 ;-------------------------------------------------------------------------------
@@ -152,8 +140,6 @@ WDT_ISR:
 ;-------------------------------------------------------------------------------
 ; Interrupt Vectors
 ;-------------------------------------------------------------------------------
-			.sect	WDT_VECTOR
-			.short	WDT_ISR
 			.sect	PORT1_VECTOR
             .short	P1_ISR
             .sect   ".reset"                ; MSP430 RESET Vector
