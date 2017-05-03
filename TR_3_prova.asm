@@ -33,87 +33,66 @@ limparPM5	xor.b	#LOCKLPM5, PM5CTL0
 			bis.b	#BIT7,		P8OUT
 
 			;S2 (P1.2 - INTERRUPÇÃO)
-			bic.b	#BIT2,		P1DIR
-			bis.b	#BIT2,		P1IE
-			bis.b	#BIT2,		P1IES
-			bis.b	#BIT2,		P1REN
-			bic.b	#BIT2,		&P1IFG
+			bic.b	#BIT0,		P2DIR
+			bis.b	#BIT0,		P2IE
+			bis.b	#BIT0,		P2IES
+			bis.b	#BIT0,		P2REN
+			bic.b	#BIT0,		P2IFG
+			bis.b	#BIT0,		P2OUT
 			nop
 			bis		#GIE,		SR; Habilita todos os interrupts
 			nop
 
-			bic.b	#BIT1,		&P1DIR
-			bis.b	#BIT1,		&P1REN
-			bis.b	#BIT1,		&P1OUT
+			bic.b	#BIT0,		&P4DIR
+			bis.b	#BIT0,		&P4REN
+			bis.b	#BIT0,		&P4OUT
 
-off			bit.b	#BIT1, &P1IN
+loop		bit.b	#BIT0, &P4IN
 			jnz		sequence
 
-sequence	bit.b   #BIT1, &P1IN
-            jz      invert
-			bic.b	#BIT4, P8OUT
-			bic.b	#BIT5, P8OUT
-			bic.b	#BIT6, P8OUT
-			bic.b	#BIT7, P8OUT
-			bit.b   #BIT1, &P1IN
-            jz      invert
+sequence	call	#clear
+			call 	#pin_sweep_sequence
 			call	#delay
-			bit.b   #BIT1, &P1IN
-            jz      invert
+			call 	#pin_sweep_sequence
 			xor.b	#BIT4, P8OUT
 			call	#delay
-			bit.b   #BIT1, &P1IN
-            jz      invert
+			call 	#pin_sweep_sequence
 			bic.b	#BIT4, P8OUT
 			xor.b	#BIT5, P8OUT
 			call	#delay
-			bit.b   #BIT1, &P1IN
-            jz      invert
+			call 	#pin_sweep_sequence
 			bic.b	#BIT5, P8OUT
 			xor.b	#BIT6, P8OUT
 			call	#delay
-			bit.b   #BIT1, &P1IN
-            jz      invert
+			call 	#pin_sweep_sequence
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT7, P8OUT
 			call	#delay
-			bit.b   #BIT1, &P1IN
-            jz      invert
-            jmp		off
+			call 	#pin_sweep_sequence
+            jmp		loop
 
-invert		bit.b	#BIT1, &P1IN
-			jz		sequence
-			bic.b	#BIT4, P8OUT
-			bic.b	#BIT5, P8OUT
-			bic.b	#BIT6, P8OUT
-			bic.b	#BIT7, P8OUT
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+invert		call 	#clear
+			call    #pin_sweep_invert
 			call	#delay
 			xor.b	#BIT7, P8OUT
 			call	#delay
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+			call    #pin_sweep_invert
 			bic.b	#BIT7, P8OUT
 			xor.b	#BIT6, P8OUT
 			call	#delay
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+			call    #pin_sweep_invert
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT5, P8OUT
 			call	#delay
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+			call    #pin_sweep_invert
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT5, P8OUT
 			call	#delay
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+			call    #pin_sweep_invert
 			bic.b	#BIT5, P8OUT
 			xor.b	#BIT4, P8OUT
 			call	#delay
-			bit.b	#BIT1, &P1IN
-			jz		sequence
+			call    #pin_sweep_invert
 			jmp 	invert
 
 delay		mov.b	#0x20000, R4
@@ -121,12 +100,23 @@ decrease	dec		R4
 			jnz		decrease
 			ret
 
+pin_sweep_invert bit.b	#BIT0, &P4IN
+				 jz		sequence
+				 ret
+
+pin_sweep_sequence bit.b   #BIT0, &P4IN
+            	   jz      invert
+            	   ret
+
+clear		bic.b	#BIT4, P8OUT
+			bic.b	#BIT5, P8OUT
+			bic.b	#BIT6, P8OUT
+			bic.b	#BIT7, P8OUT
+			ret
+
 P1_ISR:
-			nop
-			bis		#GIE,		SR; Habilita todos os interrupts
-			nop
-			bic.b	#BIT2,		&P1IFG;Libera a flag de interrupção
-			bic.b	#BIT1,		P1IE;Desativa a interrupção na p1.1
+			bic.b	#BIT0, P2IFG;Libera a flag de interrupção
+			bic.b	#BIT0, P2IE;Desativa a interrupção na p1.1
 			mov		#WDT_MDLY_32,	WDTCTL;Inicia WDT
 			bic		#WDTIFG,		SFRIFG1
 			or		#WDTIE,		SFRIE1
@@ -140,17 +130,17 @@ blink		bic.b	#BIT4, P8OUT
 			bis.b	#BIT6, P8OUT
 			bis.b	#BIT7, P8OUT
 			call	#delay
-			bit.b	#BIT2, P1IN
+			bit.b	#BIT0, P2IN
 			jz		sequence
 			jmp		blink
-			bic.b	#BIT2,		&P1IFG;Libera a flag de interrupção
+			bic.b	#BIT0, P2IFG;Libera a flag de interrupção
           	reti
 
 WDT_ISR:
 			bic		#WDTIE,			SFRIE1
 			bic		#WDTIFG,		SFRIFG1
 			mov.w   #WDTPW|WDTHOLD,&WDTCTL
-			bis.b	#BIT2,		P1IE
+			bis.b	#BIT0,		P2IE
 			reti
 
 ;-------------------------------------------------------------------------------
