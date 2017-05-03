@@ -44,16 +44,13 @@ limparPM5	xor.b	#LOCKLPM5, PM5CTL0
 			nop
 
 			;S1	(P4.0 - VARREDURA)
-			bic.b	#BIT0,		&P4DIR
-			bis.b	#BIT0,		&P4REN
-			bis.b	#BIT0,		&P4OUT
+			bic.b	#BIT0,		P4DIR
+			bis.b	#BIT0,		P4REN
+			bis.b	#BIT0,		P4OUT
 
 ;-------------------------------------------------------------------------------
 ; INÍCIO DO PROGRAMA
 ;-------------------------------------------------------------------------------
-loop		bit.b	#BIT0, &P4IN
-			jnz		sequence
-
 			;PISCA OS LEDS EM SEQUÊNCIA
 sequence	call	#clear
 			call	#delay_sequence
@@ -81,18 +78,15 @@ invert		call 	#clear
 			bic.b	#BIT6, P8OUT
 			xor.b	#BIT5, P8OUT
 			call	#delay_invert
-			bic.b	#BIT6, P8OUT
-			xor.b	#BIT5, P8OUT
-			call	#delay_invert
 			bic.b	#BIT5, P8OUT
 			xor.b	#BIT4, P8OUT
 			call	#delay_invert
 			jmp 	invert
-			
+
 ;-------------------------------------------------------------------------------
 ; FIM DO PROGRAMA
 ;-------------------------------------------------------------------------------
-			
+
 ;-------------------------------------------------------------------------------
 ; FUNÇÕES
 ;-------------------------------------------------------------------------------
@@ -103,12 +97,12 @@ decrease	dec		R4
 			ret
 
 			; FUNÇÃO QUE FAZ A VARRERUDA DO BOTÃO QUANDO OS LEDS ESTÃO PISCANDO NA ORDEM INVERSA
-pin_sweep_invert bit.b	#BIT0, &P4IN
+pin_sweep_invert bit.b	#BIT0, P4IN
 				 jz		sequence
 				 ret
 
 			; FUNÇÃO QUE FAZ A VARRERUDA DO BOTÃO QUANDO OS LEDS ESTÃO PISCANDO NA ORDEM PADRÃO
-pin_sweep_sequence bit.b   #BIT0, &P4IN
+pin_sweep_sequence bit.b   #BIT0, P4IN
             	   jz      invert
             	   ret
 
@@ -117,7 +111,7 @@ delay_sequence call 	#pin_sweep_sequence
 			   call		#delay
 			   call 	#pin_sweep_sequence
 			   ret
-			
+
 			; FUNÇÃO QUE CONFIGURA O DELAY PARA A ORDEM INVERSA DOS LEDS
 delay_invert   call		#pin_sweep_invert
 			   call		#delay
@@ -136,8 +130,10 @@ clear		bic.b	#BIT4, P8OUT
 ;-------------------------------------------------------------------------------
 
 P1_ISR:
+			nop
+			bis		#GIE,		SR; Habilita todos os interrupts
+			nop
 			bic.b	#BIT0, P2IFG;Libera a flag de interrupção
-			bic.b	#BIT0, P2IE;Desativa a interrupção na p2.0
 blink		call	#clear
 			call	#delay
 			bis.b	#BIT4, P8OUT
@@ -145,9 +141,10 @@ blink		call	#clear
 			bis.b	#BIT6, P8OUT
 			bis.b	#BIT7, P8OUT
 			call	#delay
-			bit.b	#BIT0, P2IN
-			jz		sequence
-			jmp		blink
+			call	#clear
+			call	#delay
+			jmp		sequence
+			bic.b	#BIT0, P2IE;Desativa a interrupção na p2.0
           	reti
 
 ;-------------------------------------------------------------------------------
@@ -159,7 +156,7 @@ blink		call	#clear
 ;-------------------------------------------------------------------------------
 ; Interrupt Vectors
 ;-------------------------------------------------------------------------------
-			.sect	PORT1_VECTOR
+			.sect	PORT2_VECTOR
             .short	P1_ISR
             .sect   ".reset"                ; MSP430 RESET Vector
             .short  RESET
